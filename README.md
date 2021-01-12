@@ -6,6 +6,10 @@
 [![CI](https://github.com/niclashoyer/embedded-hal-sync-pins/workflows/Continuous%20Integration/badge.svg)](https://github.com/niclashoyer/embedded-hal-sync-pins/actions)
 [![Coverage Status](https://coveralls.io/repos/github/niclashoyer/embedded-hal-sync-pins/badge.svg?branch=master)](https://coveralls.io/github/niclashoyer/embedded-hal-sync-pins?branch=master)
 
+Pin implementations for [`embedded-hal`](https://github.com/rust-embedded/embedded-hal)
+that can be manipulated and shared safely between threads.
+Especially useful for integration testing.
+
 ## License
 
 Licensed under either of
