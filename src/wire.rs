@@ -106,6 +106,12 @@ impl Wire {
 	}
 }
 
+impl Default for Wire {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 pub struct InputOnlyPin {
 	wire: Wire,
 }
