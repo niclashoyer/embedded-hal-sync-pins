@@ -75,6 +75,12 @@ impl AtomicPinState {
 	}
 }
 
+impl Default for AtomicPinState {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 /// A mutable [input pin](`hal::InputPin`) that can be safely shared between threads.
 ///
 /// This pin implements [`embedded_hal::InputPin`](`hal::InputPin`) and can be used
@@ -154,11 +160,13 @@ impl hal::OutputPin for PushPullPin {
 	type Error = Infallible;
 
 	fn try_set_high(&mut self) -> Result<(), Self::Error> {
-		Ok(self.state.store(PinState::High, Ordering::SeqCst))
+		self.state.store(PinState::High, Ordering::SeqCst);
+		Ok(())
 	}
 
 	fn try_set_low(&mut self) -> Result<(), Self::Error> {
-		Ok(self.state.store(PinState::Low, Ordering::SeqCst))
+		self.state.store(PinState::Low, Ordering::SeqCst);
+		Ok(())
 	}
 }
 
@@ -218,11 +226,13 @@ impl hal::OutputPin for OpenDrainPin {
 	type Error = Infallible;
 
 	fn try_set_high(&mut self) -> Result<(), Self::Error> {
-		Ok(self.state.store(PinState::Low, Ordering::SeqCst))
+		self.state.store(PinState::Low, Ordering::SeqCst);
+		Ok(())
 	}
 
 	fn try_set_low(&mut self) -> Result<(), Self::Error> {
-		Ok(self.state.store(PinState::Floating, Ordering::SeqCst))
+		self.state.store(PinState::Floating, Ordering::SeqCst);
+		Ok(())
 	}
 }
 

@@ -33,6 +33,12 @@ impl WireWrapper {
 	}
 }
 
+impl Default for WireWrapper {
+	fn default() -> Self {
+		Self::new()
+	}
+}
+
 #[derive(Clone, Debug)]
 pub struct Wire {
 	wire: Arc<Mutex<WireWrapper>>,
