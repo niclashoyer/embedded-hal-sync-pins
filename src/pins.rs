@@ -170,6 +170,16 @@ impl hal::OutputPin for PushPullPin {
 	}
 }
 
+impl hal::StatefulOutputPin for PushPullPin {
+	fn try_is_set_high(&self) -> Result<bool, Self::Error> {
+		Ok(self.state.load(Ordering::SeqCst) == PinState::High)
+	}
+
+	fn try_is_set_low(&self) -> Result<bool, Self::Error> {
+		Ok(self.state.load(Ordering::SeqCst) == PinState::Low)
+	}
+}
+
 impl hal::InputPin for PushPullPin {
 	type Error = Infallible;
 
@@ -233,6 +243,16 @@ impl hal::OutputPin for OpenDrainPin {
 	fn try_set_low(&mut self) -> Result<(), Self::Error> {
 		self.state.store(PinState::Floating, Ordering::SeqCst);
 		Ok(())
+	}
+}
+
+impl hal::StatefulOutputPin for OpenDrainPin {
+	fn try_is_set_high(&self) -> Result<bool, Self::Error> {
+		Ok(self.state.load(Ordering::SeqCst) == PinState::Low)
+	}
+
+	fn try_is_set_low(&self) -> Result<bool, Self::Error> {
+		Ok(self.state.load(Ordering::SeqCst) == PinState::Floating)
 	}
 }
 
@@ -327,6 +347,7 @@ mod tests {
 	fn hal_push_pull_pin() {
 		use hal::InputPin as HalInputPin;
 		use hal::OutputPin as HalOutputPin;
+		use hal::StatefulOutputPin as HalStatefulOutputPin;
 		use PinState::*;
 		let state = Arc::new(AtomicPinState::new());
 		let mut pin = PushPullPin::new(state.clone());
@@ -335,7 +356,11 @@ mod tests {
 		assert_eq!(High, state.load(Ordering::SeqCst));
 		assert_eq!(Ok(true), pin.try_is_high());
 		assert_eq!(Ok(false), pin.try_is_low());
+		assert_eq!(Ok(false), pin.try_is_set_low());
+		assert_eq!(Ok(true), pin.try_is_set_high());
 		assert_eq!(Ok(()), pin.try_set_low());
+		assert_eq!(Ok(true), pin.try_is_set_low());
+		assert_eq!(Ok(false), pin.try_is_set_high());
 		assert_eq!(Low, state.load(Ordering::SeqCst));
 		assert_eq!(Ok(false), pin.try_is_high());
 		assert_eq!(Ok(true), pin.try_is_low());
@@ -345,6 +370,7 @@ mod tests {
 	fn hal_open_drain_pin() {
 		use hal::InputPin as HalInputPin;
 		use hal::OutputPin as HalOutputPin;
+		use hal::StatefulOutputPin as HalStatefulOutputPin;
 		use PinState::*;
 		let state = Arc::new(AtomicPinState::new());
 		let mut pin = OpenDrainPin::new(state.clone());
@@ -353,9 +379,13 @@ mod tests {
 		assert_eq!(Low, state.load(Ordering::SeqCst));
 		assert_eq!(Ok(false), pin.try_is_high());
 		assert_eq!(Ok(true), pin.try_is_low());
+		assert_eq!(Ok(false), pin.try_is_set_low());
+		assert_eq!(Ok(true), pin.try_is_set_high());
 		assert_eq!(Ok(()), pin.try_set_low());
 		assert_eq!(Floating, state.load(Ordering::SeqCst));
 		assert_eq!(Ok(false), pin.try_is_high());
 		assert_eq!(Ok(false), pin.try_is_low());
+		assert_eq!(Ok(true), pin.try_is_set_low());
+		assert_eq!(Ok(false), pin.try_is_set_high());
 	}
 }

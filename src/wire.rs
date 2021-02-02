@@ -1,4 +1,4 @@
-use embedded_hal::digital::{InputPin, OutputPin};
+use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin};
 use std::convert::Infallible;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -59,6 +59,10 @@ impl Wire {
 		self.wire.lock().unwrap().state[id] = state;
 		// check for short circuit
 		let _ = self.get_state();
+	}
+
+	pub fn get_pin_state(&self, id: PinId) -> WireState {
+		self.wire.lock().unwrap().state[id]
 	}
 
 	pub fn get_state(&self) -> WireState {
@@ -159,6 +163,16 @@ impl OutputPin for PushPullPin {
 	}
 }
 
+impl StatefulOutputPin for PushPullPin {
+	fn try_is_set_high(&self) -> Result<bool, Self::Error> {
+		Ok(self.wire.get_pin_state(self.id) == WireState::High)
+	}
+
+	fn try_is_set_low(&self) -> Result<bool, Self::Error> {
+		Ok(self.wire.get_pin_state(self.id) == WireState::Low)
+	}
+}
+
 pub struct OpenDrainPin {
 	wire: Wire,
 	id: PinId,
@@ -190,6 +204,16 @@ impl OutputPin for OpenDrainPin {
 	}
 }
 
+impl StatefulOutputPin for OpenDrainPin {
+	fn try_is_set_high(&self) -> Result<bool, Self::Error> {
+		Ok(self.wire.get_pin_state(self.id) == WireState::Low)
+	}
+
+	fn try_is_set_low(&self) -> Result<bool, Self::Error> {
+		Ok(self.wire.get_pin_state(self.id) == WireState::Floating)
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -210,6 +234,8 @@ mod tests {
 		assert_eq!(High, wire.get_state());
 		assert_eq!(Ok(()), pin.try_set_high());
 		assert_eq!(Low, wire.get_state());
+		assert_eq!(Ok(false), pin.try_is_set_low());
+		assert_eq!(Ok(true), pin.try_is_set_high());
 	}
 
 	#[test]
@@ -218,9 +244,13 @@ mod tests {
 		let mut pin = wire.as_push_pull_pin();
 		assert_eq!(Low, wire.get_state());
 		assert_eq!(Ok(()), pin.try_set_high());
+		assert_eq!(Ok(false), pin.try_is_set_low());
+		assert_eq!(Ok(true), pin.try_is_set_high());
 		assert_eq!(High, wire.get_state());
 		assert_eq!(Ok(()), pin.try_set_low());
 		assert_eq!(Low, wire.get_state());
+		assert_eq!(Ok(true), pin.try_is_set_low());
+		assert_eq!(Ok(false), pin.try_is_set_high());
 	}
 
 	#[test]
