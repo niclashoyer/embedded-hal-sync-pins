@@ -60,7 +60,7 @@ impl AtomicPinState {
 
 	/// Loads a state from the atomic pin state.
 	///
-	/// `load` taks an [`Ordering`] argument which describes the memory
+	/// `load` takes an [`Ordering`] argument which describes the memory
 	/// ordering of this operation. For more information see [`AtomicUsize::load`].
 	pub fn load(&self, order: Ordering) -> PinState {
 		PinState::from_usize(self.state.load(order)).unwrap()
@@ -68,7 +68,7 @@ impl AtomicPinState {
 
 	/// Stores a state into the atomic pin state.
 	///
-	/// `store` taks an [`Ordering`] argument which describes the memory
+	/// `store` takes an [`Ordering`] argument which describes the memory
 	/// ordering of this operation. For more information see [`AtomicUsize::store`].
 	pub fn store(&self, state: PinState, order: Ordering) {
 		self.state.store(state.to_usize().unwrap(), order);

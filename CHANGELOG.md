@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ## [0.2.0] - 2021-02-01
-
+### Added
  - Add implementation of `embedded_hal::digital::StatefulOutputPin`
+ 
+### Fixed
+ - Minor spelling correction in documentation.
 
 ## [0.1.0] - 2021-01-12
-
- - First public release
+### Added
+ - First public release.
