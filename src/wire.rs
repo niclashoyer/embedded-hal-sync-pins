@@ -1,3 +1,4 @@
+use embedded_hal::digital::toggleable::Default as ToggleDefault;
 use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin};
 use std::convert::Infallible;
 use std::sync::Arc;
@@ -173,6 +174,8 @@ impl StatefulOutputPin for PushPullPin {
 	}
 }
 
+impl ToggleDefault for PushPullPin {}
+
 pub struct OpenDrainPin {
 	wire: Wire,
 	id: PinId,
@@ -213,6 +216,8 @@ impl StatefulOutputPin for OpenDrainPin {
 		Ok(self.wire.get_pin_state(self.id) == WireState::Floating)
 	}
 }
+
+impl ToggleDefault for OpenDrainPin {}
 
 #[cfg(test)]
 mod tests {
