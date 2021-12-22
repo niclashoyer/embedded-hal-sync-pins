@@ -362,6 +362,11 @@ mod tests {
 	fn atomic_pin_state() {
 		use PinState::*;
 		let state = AtomicPinState::new();
+		let state_def = AtomicPinState::default();
+		assert_eq!(
+			state_def.load(Ordering::SeqCst),
+			state.load(Ordering::SeqCst)
+		);
 		assert_eq!(Floating, state.load(Ordering::SeqCst));
 		// loading second time should still contain value
 		assert_eq!(Floating, state.load(Ordering::SeqCst));
@@ -392,6 +397,7 @@ mod tests {
 		use hal::InputPin as HalInputPin;
 		use hal::OutputPin as HalOutputPin;
 		use hal::StatefulOutputPin as HalStatefulOutputPin;
+		use hal::ToggleableOutputPin;
 		use PinState::*;
 		let state = Arc::new(AtomicPinState::new());
 		let mut pin = PushPullPin::new(state.clone());
@@ -408,6 +414,10 @@ mod tests {
 		assert_eq!(Low, state.load(Ordering::SeqCst));
 		assert_eq!(Ok(false), pin.is_high());
 		assert_eq!(Ok(true), pin.is_low());
+		assert_eq!(Ok(()), pin.toggle());
+		assert_eq!(High, state.load(Ordering::SeqCst));
+		assert_eq!(Ok(()), pin.toggle());
+		assert_eq!(Low, state.load(Ordering::SeqCst));
 	}
 
 	#[test]
@@ -415,6 +425,7 @@ mod tests {
 		use hal::InputPin as HalInputPin;
 		use hal::OutputPin as HalOutputPin;
 		use hal::StatefulOutputPin as HalStatefulOutputPin;
+		use hal::ToggleableOutputPin;
 		use PinState::*;
 		let state = Arc::new(AtomicPinState::new());
 		let mut pin = OpenDrainPin::new(state.clone());
@@ -431,5 +442,9 @@ mod tests {
 		assert_eq!(Ok(false), pin.is_low());
 		assert_eq!(Ok(true), pin.is_set_low());
 		assert_eq!(Ok(false), pin.is_set_high());
+		assert_eq!(Ok(()), pin.toggle());
+		assert_eq!(Low, state.load(Ordering::SeqCst));
+		assert_eq!(Ok(()), pin.toggle());
+		assert_eq!(Floating, state.load(Ordering::SeqCst));
 	}
 }
