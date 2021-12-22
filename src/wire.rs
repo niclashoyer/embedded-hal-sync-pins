@@ -1,5 +1,4 @@
-use embedded_hal::digital::toggleable::Default as ToggleDefault;
-use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin};
+use embedded_hal::digital::blocking::{InputPin, OutputPin, StatefulOutputPin};
 use std::convert::Infallible;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -75,7 +74,7 @@ impl Wire {
 				continue;
 			}
 			if s != Floating && *state != Floating && *state != s {
-				panic!(format!("short circuit: {:?}", wire.state));
+				panic!("short circuit: {:?}", wire.state);
 			}
 			s = *state;
 		}
@@ -124,11 +123,11 @@ pub struct InputOnlyPin {
 impl InputPin for InputOnlyPin {
 	type Error = Infallible;
 
-	fn try_is_high(&self) -> Result<bool, Self::Error> {
+	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_state() == WireState::High)
 	}
 
-	fn try_is_low(&self) -> Result<bool, Self::Error> {
+	fn is_low(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_state() == WireState::Low)
 	}
 }
@@ -141,11 +140,11 @@ pub struct PushPullPin {
 impl InputPin for PushPullPin {
 	type Error = Infallible;
 
-	fn try_is_high(&self) -> Result<bool, Self::Error> {
+	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_state() == WireState::High)
 	}
 
-	fn try_is_low(&self) -> Result<bool, Self::Error> {
+	fn is_low(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_state() == WireState::Low)
 	}
 }
@@ -153,28 +152,26 @@ impl InputPin for PushPullPin {
 impl OutputPin for PushPullPin {
 	type Error = Infallible;
 
-	fn try_set_low(&mut self) -> Result<(), Self::Error> {
+	fn set_low(&mut self) -> Result<(), Self::Error> {
 		self.wire.set_state(self.id, WireState::Low);
 		Ok(())
 	}
 
-	fn try_set_high(&mut self) -> Result<(), Self::Error> {
+	fn set_high(&mut self) -> Result<(), Self::Error> {
 		self.wire.set_state(self.id, WireState::High);
 		Ok(())
 	}
 }
 
 impl StatefulOutputPin for PushPullPin {
-	fn try_is_set_high(&self) -> Result<bool, Self::Error> {
+	fn is_set_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_pin_state(self.id) == WireState::High)
 	}
 
-	fn try_is_set_low(&self) -> Result<bool, Self::Error> {
+	fn is_set_low(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_pin_state(self.id) == WireState::Low)
 	}
 }
-
-impl ToggleDefault for PushPullPin {}
 
 pub struct OpenDrainPin {
 	wire: Wire,
@@ -184,11 +181,11 @@ pub struct OpenDrainPin {
 impl InputPin for OpenDrainPin {
 	type Error = Infallible;
 
-	fn try_is_high(&self) -> Result<bool, Self::Error> {
+	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_state() == WireState::High)
 	}
 
-	fn try_is_low(&self) -> Result<bool, Self::Error> {
+	fn is_low(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_state() == WireState::Low)
 	}
 }
@@ -196,28 +193,26 @@ impl InputPin for OpenDrainPin {
 impl OutputPin for OpenDrainPin {
 	type Error = Infallible;
 
-	fn try_set_low(&mut self) -> Result<(), Self::Error> {
+	fn set_low(&mut self) -> Result<(), Self::Error> {
 		self.wire.set_state(self.id, WireState::Floating);
 		Ok(())
 	}
 
-	fn try_set_high(&mut self) -> Result<(), Self::Error> {
+	fn set_high(&mut self) -> Result<(), Self::Error> {
 		self.wire.set_state(self.id, WireState::Low);
 		Ok(())
 	}
 }
 
 impl StatefulOutputPin for OpenDrainPin {
-	fn try_is_set_high(&self) -> Result<bool, Self::Error> {
+	fn is_set_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_pin_state(self.id) == WireState::Low)
 	}
 
-	fn try_is_set_low(&self) -> Result<bool, Self::Error> {
+	fn is_set_low(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_pin_state(self.id) == WireState::Floating)
 	}
 }
-
-impl ToggleDefault for OpenDrainPin {}
 
 #[cfg(test)]
 mod tests {
@@ -237,10 +232,10 @@ mod tests {
 		let wire = Wire::new_with_pull(High);
 		let mut pin = wire.as_open_drain_pin();
 		assert_eq!(High, wire.get_state());
-		assert_eq!(Ok(()), pin.try_set_high());
+		assert_eq!(Ok(()), pin.set_high());
 		assert_eq!(Low, wire.get_state());
-		assert_eq!(Ok(false), pin.try_is_set_low());
-		assert_eq!(Ok(true), pin.try_is_set_high());
+		assert_eq!(Ok(false), pin.is_set_low());
+		assert_eq!(Ok(true), pin.is_set_high());
 	}
 
 	#[test]
@@ -248,14 +243,14 @@ mod tests {
 		let wire = Wire::new_with_pull(Low);
 		let mut pin = wire.as_push_pull_pin();
 		assert_eq!(Low, wire.get_state());
-		assert_eq!(Ok(()), pin.try_set_high());
-		assert_eq!(Ok(false), pin.try_is_set_low());
-		assert_eq!(Ok(true), pin.try_is_set_high());
+		assert_eq!(Ok(()), pin.set_high());
+		assert_eq!(Ok(false), pin.is_set_low());
+		assert_eq!(Ok(true), pin.is_set_high());
 		assert_eq!(High, wire.get_state());
-		assert_eq!(Ok(()), pin.try_set_low());
+		assert_eq!(Ok(()), pin.set_low());
 		assert_eq!(Low, wire.get_state());
-		assert_eq!(Ok(true), pin.try_is_set_low());
-		assert_eq!(Ok(false), pin.try_is_set_high());
+		assert_eq!(Ok(true), pin.is_set_low());
+		assert_eq!(Ok(false), pin.is_set_high());
 	}
 
 	#[test]
@@ -264,16 +259,16 @@ mod tests {
 		let mut pin_out = wire.as_push_pull_pin();
 		let pin_in = wire.as_input_pin();
 		assert_eq!(Floating, wire.get_state());
-		assert_eq!(Ok(false), pin_in.try_is_high());
-		assert_eq!(Ok(false), pin_in.try_is_low());
-		assert_eq!(Ok(()), pin_out.try_set_low());
+		assert_eq!(Ok(false), pin_in.is_high());
+		assert_eq!(Ok(false), pin_in.is_low());
+		assert_eq!(Ok(()), pin_out.set_low());
 		assert_eq!(Low, wire.get_state());
-		assert_eq!(Ok(false), pin_in.try_is_high());
-		assert_eq!(Ok(true), pin_in.try_is_low());
-		assert_eq!(Ok(()), pin_out.try_set_high());
+		assert_eq!(Ok(false), pin_in.is_high());
+		assert_eq!(Ok(true), pin_in.is_low());
+		assert_eq!(Ok(()), pin_out.set_high());
 		assert_eq!(High, wire.get_state());
-		assert_eq!(Ok(true), pin_in.try_is_high());
-		assert_eq!(Ok(false), pin_in.try_is_low());
+		assert_eq!(Ok(true), pin_in.is_high());
+		assert_eq!(Ok(false), pin_in.is_low());
 	}
 
 	#[test]
@@ -282,8 +277,8 @@ mod tests {
 		let wire = Wire::new();
 		let mut pin1 = wire.as_push_pull_pin();
 		let mut pin2 = wire.as_push_pull_pin();
-		assert_eq!(Ok(()), pin1.try_set_high());
+		assert_eq!(Ok(()), pin1.set_high());
 		// this will cause a short circuit and panic
-		assert_eq!(Ok(()), pin2.try_set_low());
+		assert_eq!(Ok(()), pin2.set_low());
 	}
 }
