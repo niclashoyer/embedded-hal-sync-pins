@@ -2,15 +2,15 @@
 //!
 //! This module provides implementations of atomic pin types that
 //! can be used by any [`embedded_hal`] implementation that use
-//! [`Input`-](`embedded_hal::digital::InputPin`) or
-//! [`OutputPin`s](`embedded_hal::digital::OutputPin`).
+//! [`Input`-](`embedded_hal::digital::blocking::InputPin`) or
+//! [`OutputPin`s](`embedded_hal::digital::blocking::OutputPin`).
 //!
 //! As atomic types these pins use primitive [`atomic`](`std::sync::atomic`) types,
 //! so that these pins can be shared safely between threads. Especially useful
 //! for integration testing.
 
 use core::convert::Infallible;
-use embedded_hal::digital as hal;
+use embedded_hal::digital::blocking as hal;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -73,6 +73,22 @@ impl AtomicPinState {
 	pub fn store(&self, state: PinState, order: Ordering) {
 		self.state.store(state.to_usize().unwrap(), order);
 	}
+
+	/// Updates the state of this atomic pin state based on a stored value.
+	///
+	/// `toggle` takes an [`Ordering`] argument which describes the memory
+	/// ordering of this operation. For more information see [`AtomicUsize::store`].
+	pub fn fetch_update<F>(&self, set_order: Ordering, fetch_order: Ordering, mut f: F)
+	where
+		F: FnMut(PinState) -> Option<PinState>,
+	{
+		self.state
+			.fetch_update(set_order, fetch_order, |pin| {
+				let pin = PinState::from_usize(pin).unwrap();
+				f(pin).map(|x| x.to_usize().unwrap())
+			})
+			.unwrap();
+	}
 }
 
 impl Default for AtomicPinState {
@@ -90,14 +106,14 @@ impl Default for AtomicPinState {
 ///
 /// ```
 /// use embedded_hal_sync_pins::pins::{AtomicPinState, InputPin, PinState};
-/// use embedded_hal::digital::InputPin as HalInputPin;
+/// use embedded_hal::digital::blocking::InputPin as HalInputPin;
 /// use std::sync::{Arc, atomic::Ordering};
 ///
 /// let state = Arc::new(AtomicPinState::new_with_state(PinState::Low));
 /// let pin = InputPin::new(state.clone());
-/// assert_eq!(Ok(true), pin.try_is_low());
+/// assert_eq!(Ok(true), pin.is_low());
 /// state.store(PinState::High, Ordering::SeqCst);
-/// assert_eq!(Ok(true), pin.try_is_high());
+/// assert_eq!(Ok(true), pin.is_high());
 /// ```
 #[derive(Clone, Debug)]
 pub struct InputPin {
@@ -114,11 +130,11 @@ impl InputPin {
 impl hal::InputPin for InputPin {
 	type Error = Infallible;
 
-	fn try_is_high(&self) -> Result<bool, Self::Error> {
+	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::High)
 	}
 
-	fn try_is_low(&self) -> Result<bool, Self::Error> {
+	fn is_low(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::Low)
 	}
 }
@@ -135,15 +151,15 @@ impl hal::InputPin for InputPin {
 ///
 /// ```
 /// use embedded_hal_sync_pins::pins::{AtomicPinState, PushPullPin, PinState};
-/// use embedded_hal::digital::{InputPin as HalInputPin, OutputPin};
+/// use embedded_hal::digital::blocking::{InputPin as HalInputPin, OutputPin};
 /// use std::sync::Arc;
 ///
 /// let state = Arc::new(AtomicPinState::new());
 /// let mut pin = PushPullPin::new(state.clone());
-/// pin.try_set_low().unwrap();
-/// assert_eq!(Ok(true), pin.try_is_low());
-/// pin.try_set_high().unwrap();
-/// assert_eq!(Ok(true), pin.try_is_high());
+/// pin.set_low().unwrap();
+/// assert_eq!(Ok(true), pin.is_low());
+/// pin.set_high().unwrap();
+/// assert_eq!(Ok(true), pin.is_high());
 /// ```
 #[derive(Clone, Debug)]
 pub struct PushPullPin {
@@ -159,37 +175,49 @@ impl PushPullPin {
 impl hal::OutputPin for PushPullPin {
 	type Error = Infallible;
 
-	fn try_set_high(&mut self) -> Result<(), Self::Error> {
+	fn set_high(&mut self) -> Result<(), Self::Error> {
 		self.state.store(PinState::High, Ordering::SeqCst);
 		Ok(())
 	}
 
-	fn try_set_low(&mut self) -> Result<(), Self::Error> {
+	fn set_low(&mut self) -> Result<(), Self::Error> {
 		self.state.store(PinState::Low, Ordering::SeqCst);
 		Ok(())
 	}
 }
 
 impl hal::StatefulOutputPin for PushPullPin {
-	fn try_is_set_high(&self) -> Result<bool, Self::Error> {
+	fn is_set_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::High)
 	}
 
-	fn try_is_set_low(&self) -> Result<bool, Self::Error> {
+	fn is_set_low(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::Low)
 	}
 }
 
-impl hal::toggleable::Default for PushPullPin {}
+impl hal::ToggleableOutputPin for PushPullPin {
+	type Error = Infallible;
+
+	fn toggle(&mut self) -> Result<(), Self::Error> {
+		self.state
+			.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |x| match x {
+				PinState::Low => Some(PinState::High),
+				PinState::High => Some(PinState::Low),
+				_ => None,
+			});
+		Ok(())
+	}
+}
 
 impl hal::InputPin for PushPullPin {
 	type Error = Infallible;
 
-	fn try_is_high(&self) -> Result<bool, Self::Error> {
+	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::High)
 	}
 
-	fn try_is_low(&self) -> Result<bool, Self::Error> {
+	fn is_low(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::Low)
 	}
 }
@@ -209,18 +237,18 @@ impl hal::InputPin for PushPullPin {
 ///
 /// ```
 /// use embedded_hal_sync_pins::pins::{AtomicPinState, OpenDrainPin, PinState};
-/// use embedded_hal::digital::{InputPin as HalInputPin, OutputPin};
+/// use embedded_hal::digital::blocking::{InputPin as HalInputPin, OutputPin};
 /// use std::sync::{Arc, atomic::Ordering};
 ///
 /// let state = Arc::new(AtomicPinState::new());
 /// let mut pin = OpenDrainPin::new(state.clone());
-/// pin.try_set_low().unwrap();
-/// assert_eq!(Ok(false), pin.try_is_low());
-/// assert_eq!(Ok(false), pin.try_is_high());
+/// pin.set_low().unwrap();
+/// assert_eq!(Ok(false), pin.is_low());
+/// assert_eq!(Ok(false), pin.is_high());
 /// assert_eq!(PinState::Floating, state.load(Ordering::SeqCst));
-/// pin.try_set_high().unwrap();
-/// assert_eq!(Ok(false), pin.try_is_high());
-/// assert_eq!(Ok(true), pin.try_is_low());
+/// pin.set_high().unwrap();
+/// assert_eq!(Ok(false), pin.is_high());
+/// assert_eq!(Ok(true), pin.is_low());
 /// ```
 
 #[derive(Clone, Debug)]
@@ -237,37 +265,49 @@ impl OpenDrainPin {
 impl hal::OutputPin for OpenDrainPin {
 	type Error = Infallible;
 
-	fn try_set_high(&mut self) -> Result<(), Self::Error> {
+	fn set_high(&mut self) -> Result<(), Self::Error> {
 		self.state.store(PinState::Low, Ordering::SeqCst);
 		Ok(())
 	}
 
-	fn try_set_low(&mut self) -> Result<(), Self::Error> {
+	fn set_low(&mut self) -> Result<(), Self::Error> {
 		self.state.store(PinState::Floating, Ordering::SeqCst);
 		Ok(())
 	}
 }
 
 impl hal::StatefulOutputPin for OpenDrainPin {
-	fn try_is_set_high(&self) -> Result<bool, Self::Error> {
+	fn is_set_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::Low)
 	}
 
-	fn try_is_set_low(&self) -> Result<bool, Self::Error> {
+	fn is_set_low(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::Floating)
 	}
 }
 
-impl hal::toggleable::Default for OpenDrainPin {}
+impl hal::ToggleableOutputPin for OpenDrainPin {
+	type Error = Infallible;
+
+	fn toggle(&mut self) -> Result<(), Self::Error> {
+		self.state
+			.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |x| match x {
+				PinState::Low => Some(PinState::Floating),
+				PinState::Floating => Some(PinState::Low),
+				_ => None,
+			});
+		Ok(())
+	}
+}
 
 impl hal::InputPin for OpenDrainPin {
 	type Error = Infallible;
 
-	fn try_is_high(&self) -> Result<bool, Self::Error> {
+	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::High)
 	}
 
-	fn try_is_low(&self) -> Result<bool, Self::Error> {
+	fn is_low(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::Low)
 	}
 }
@@ -337,14 +377,14 @@ mod tests {
 		use PinState::*;
 		let state = Arc::new(AtomicPinState::new());
 		let pin = InputPin::new(state.clone());
-		assert_eq!(Ok(false), pin.try_is_high());
-		assert_eq!(Ok(false), pin.try_is_low());
+		assert_eq!(Ok(false), pin.is_high());
+		assert_eq!(Ok(false), pin.is_low());
 		state.store(High, Ordering::SeqCst);
-		assert_eq!(Ok(true), pin.try_is_high());
-		assert_eq!(Ok(false), pin.try_is_low());
+		assert_eq!(Ok(true), pin.is_high());
+		assert_eq!(Ok(false), pin.is_low());
 		state.store(Low, Ordering::SeqCst);
-		assert_eq!(Ok(false), pin.try_is_high());
-		assert_eq!(Ok(true), pin.try_is_low());
+		assert_eq!(Ok(false), pin.is_high());
+		assert_eq!(Ok(true), pin.is_low());
 	}
 
 	#[test]
@@ -356,18 +396,18 @@ mod tests {
 		let state = Arc::new(AtomicPinState::new());
 		let mut pin = PushPullPin::new(state.clone());
 		assert_eq!(Floating, state.load(Ordering::SeqCst));
-		assert_eq!(Ok(()), pin.try_set_high());
+		assert_eq!(Ok(()), pin.set_high());
 		assert_eq!(High, state.load(Ordering::SeqCst));
-		assert_eq!(Ok(true), pin.try_is_high());
-		assert_eq!(Ok(false), pin.try_is_low());
-		assert_eq!(Ok(false), pin.try_is_set_low());
-		assert_eq!(Ok(true), pin.try_is_set_high());
-		assert_eq!(Ok(()), pin.try_set_low());
-		assert_eq!(Ok(true), pin.try_is_set_low());
-		assert_eq!(Ok(false), pin.try_is_set_high());
+		assert_eq!(Ok(true), pin.is_high());
+		assert_eq!(Ok(false), pin.is_low());
+		assert_eq!(Ok(false), pin.is_set_low());
+		assert_eq!(Ok(true), pin.is_set_high());
+		assert_eq!(Ok(()), pin.set_low());
+		assert_eq!(Ok(true), pin.is_set_low());
+		assert_eq!(Ok(false), pin.is_set_high());
 		assert_eq!(Low, state.load(Ordering::SeqCst));
-		assert_eq!(Ok(false), pin.try_is_high());
-		assert_eq!(Ok(true), pin.try_is_low());
+		assert_eq!(Ok(false), pin.is_high());
+		assert_eq!(Ok(true), pin.is_low());
 	}
 
 	#[test]
@@ -379,17 +419,17 @@ mod tests {
 		let state = Arc::new(AtomicPinState::new());
 		let mut pin = OpenDrainPin::new(state.clone());
 		assert_eq!(Floating, state.load(Ordering::SeqCst));
-		assert_eq!(Ok(()), pin.try_set_high());
+		assert_eq!(Ok(()), pin.set_high());
 		assert_eq!(Low, state.load(Ordering::SeqCst));
-		assert_eq!(Ok(false), pin.try_is_high());
-		assert_eq!(Ok(true), pin.try_is_low());
-		assert_eq!(Ok(false), pin.try_is_set_low());
-		assert_eq!(Ok(true), pin.try_is_set_high());
-		assert_eq!(Ok(()), pin.try_set_low());
+		assert_eq!(Ok(false), pin.is_high());
+		assert_eq!(Ok(true), pin.is_low());
+		assert_eq!(Ok(false), pin.is_set_low());
+		assert_eq!(Ok(true), pin.is_set_high());
+		assert_eq!(Ok(()), pin.set_low());
 		assert_eq!(Floating, state.load(Ordering::SeqCst));
-		assert_eq!(Ok(false), pin.try_is_high());
-		assert_eq!(Ok(false), pin.try_is_low());
-		assert_eq!(Ok(true), pin.try_is_set_low());
-		assert_eq!(Ok(false), pin.try_is_set_high());
+		assert_eq!(Ok(false), pin.is_high());
+		assert_eq!(Ok(false), pin.is_low());
+		assert_eq!(Ok(true), pin.is_set_low());
+		assert_eq!(Ok(false), pin.is_set_high());
 	}
 }

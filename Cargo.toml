@@ -1,6 +1,6 @@
 [package]
 name = "embedded-hal-sync-pins"
-version = "0.3.1"
+version = "0.4.0"
 authors = ["Niclas Hoyer <info@niclashoyer.de>"]
 edition = "2018"
 description = "embedded-hal pin implementations that can be shared between threads"
@@ -11,7 +11,7 @@ license = "MIT OR Apache-2.0"
 embedded-time = "0.10"
 num-derive = "0.3"
 num-traits = "0.2"
-embedded-hal = "1.0.0-alpha.4"
+embedded-hal = "1.0.0-alpha.6"
 vcd = { version = "0.6", optional = true }
 
 [features]

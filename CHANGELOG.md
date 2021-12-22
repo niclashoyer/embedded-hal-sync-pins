@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2021-12-23
+### Changed
+ - Updated `embedded-hal` to `1.0.0-alpha.6`
+
+### Removed
+ - `ToggleableOutputPin` implementation for `wire` was removed, as the default
+   implementation was removed from `embedded-hal` and an explicit implementation
+   on the wire requires more work
+
 ## [0.3.1] - 2021-02-05
 ### Fixed
  - Fixed implementation of `embedded_hal::digital::ToggleableOutputPin` for wire pins
