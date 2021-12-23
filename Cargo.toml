@@ -1,6 +1,6 @@
 [package]
 name = "embedded-hal-sync-pins"
-version = "0.4.1"
+version = "0.4.2"
 authors = ["Niclas Hoyer <info@niclashoyer.de>"]
 edition = "2018"
 description = "embedded-hal pin implementations that can be shared between threads"

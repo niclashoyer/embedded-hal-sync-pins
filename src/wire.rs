@@ -1,4 +1,6 @@
-use embedded_hal::digital::blocking::{InputPin, OutputPin, StatefulOutputPin};
+use embedded_hal::digital::blocking::{
+	InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin,
+};
 use std::convert::Infallible;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -56,19 +58,34 @@ impl Wire {
 	}
 
 	pub fn set_state(&mut self, id: PinId, state: WireState) {
-		self.wire.lock().unwrap().state[id] = state;
+		let mut wire = self.wire.lock().unwrap();
+		wire.state[id] = state;
 		// check for short circuit
-		let _ = self.get_state();
+		let _ = Self::wire_state(&wire);
 	}
 
 	pub fn get_pin_state(&self, id: PinId) -> WireState {
 		self.wire.lock().unwrap().state[id]
 	}
 
+	pub fn update_pin_state<F>(&mut self, id: PinId, mut f: F)
+	where
+		F: FnMut(WireState) -> WireState,
+	{
+		let mut wire = self.wire.lock().unwrap();
+		wire.state[id] = f(wire.state[id]);
+		// check for short circuit
+		let _ = Self::wire_state(&wire);
+	}
+
 	pub fn get_state(&self) -> WireState {
+		let wire = self.wire.lock().unwrap();
+		Self::wire_state(&wire)
+	}
+
+	fn wire_state(wire: &WireWrapper) -> WireState {
 		use WireState::*;
 		let mut s = Floating;
-		let wire = self.wire.lock().unwrap();
 		for state in wire.state.iter() {
 			if *state == Floating {
 				continue;
@@ -173,6 +190,19 @@ impl StatefulOutputPin for PushPullPin {
 	}
 }
 
+impl ToggleableOutputPin for PushPullPin {
+	type Error = Infallible;
+
+	fn toggle(&mut self) -> Result<(), Self::Error> {
+		self.wire.update_pin_state(self.id, |x| match x {
+			WireState::High => WireState::Low,
+			WireState::Low => WireState::High,
+			_ => x,
+		});
+		Ok(())
+	}
+}
+
 pub struct OpenDrainPin {
 	wire: Wire,
 	id: PinId,
@@ -214,6 +244,19 @@ impl StatefulOutputPin for OpenDrainPin {
 	}
 }
 
+impl ToggleableOutputPin for OpenDrainPin {
+	type Error = Infallible;
+
+	fn toggle(&mut self) -> Result<(), Self::Error> {
+		self.wire.update_pin_state(self.id, |x| match x {
+			WireState::Floating => WireState::Low,
+			WireState::Low => WireState::Floating,
+			_ => x,
+		});
+		Ok(())
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -236,6 +279,10 @@ mod tests {
 		assert_eq!(Low, wire.get_state());
 		assert_eq!(Ok(false), pin.is_set_low());
 		assert_eq!(Ok(true), pin.is_set_high());
+		assert_eq!(Ok(()), pin.toggle());
+		assert_eq!(High, wire.get_state());
+		assert_eq!(Ok(()), pin.toggle());
+		assert_eq!(Low, wire.get_state());
 	}
 
 	#[test]
@@ -251,6 +298,10 @@ mod tests {
 		assert_eq!(Low, wire.get_state());
 		assert_eq!(Ok(true), pin.is_set_low());
 		assert_eq!(Ok(false), pin.is_set_high());
+		assert_eq!(Ok(()), pin.toggle());
+		assert_eq!(High, wire.get_state());
+		assert_eq!(Ok(()), pin.toggle());
+		assert_eq!(Low, wire.get_state());
 	}
 
 	#[test]
