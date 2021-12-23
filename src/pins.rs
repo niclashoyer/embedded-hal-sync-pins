@@ -82,12 +82,10 @@ impl AtomicPinState {
 	where
 		F: FnMut(PinState) -> Option<PinState>,
 	{
-		self.state
-			.fetch_update(set_order, fetch_order, |pin| {
-				let pin = PinState::from_usize(pin).unwrap();
-				f(pin).map(|x| x.to_usize().unwrap())
-			})
-			.unwrap();
+		let _ = self.state.fetch_update(set_order, fetch_order, |pin| {
+			let pin = PinState::from_usize(pin).unwrap();
+			f(pin).map(|x| x.to_usize().unwrap())
+		});
 	}
 }
 
