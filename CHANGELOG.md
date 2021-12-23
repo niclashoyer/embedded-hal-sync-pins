@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2021-12-23
+### Added
+ - Reimplemented `ToggleableOutputPin` for `wire` with correct locking
+
 ## [0.4.1] - 2021-12-23
 ### Changed
  - Extended tests to increase test coverage
