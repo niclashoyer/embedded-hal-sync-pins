@@ -202,7 +202,7 @@ impl hal::ToggleableOutputPin for PushPullPin {
 			.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |x| match x {
 				PinState::Low => Some(PinState::High),
 				PinState::High => Some(PinState::Low),
-				_ => None,
+				PinState::Floating => Some(PinState::Low),
 			});
 		Ok(())
 	}
@@ -290,9 +290,9 @@ impl hal::ToggleableOutputPin for OpenDrainPin {
 	fn toggle(&mut self) -> Result<(), Self::Error> {
 		self.state
 			.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |x| match x {
-				PinState::Low => Some(PinState::Floating),
 				PinState::Floating => Some(PinState::Low),
-				_ => None,
+				PinState::Low => Some(PinState::Floating),
+				PinState::High => Some(PinState::Floating),
 			});
 		Ok(())
 	}

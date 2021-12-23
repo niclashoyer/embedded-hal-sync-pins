@@ -195,9 +195,9 @@ impl ToggleableOutputPin for PushPullPin {
 
 	fn toggle(&mut self) -> Result<(), Self::Error> {
 		self.wire.update_pin_state(self.id, |x| match x {
-			WireState::High => WireState::Low,
 			WireState::Low => WireState::High,
-			WireState::Floating => unreachable!(),
+			WireState::High => WireState::Low,
+			WireState::Floating => WireState::Low,
 		});
 		Ok(())
 	}
@@ -251,7 +251,7 @@ impl ToggleableOutputPin for OpenDrainPin {
 		self.wire.update_pin_state(self.id, |x| match x {
 			WireState::Floating => WireState::Low,
 			WireState::Low => WireState::Floating,
-			WireState::High => unreachable!(),
+			WireState::High => WireState::Floating,
 		});
 		Ok(())
 	}
