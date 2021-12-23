@@ -102,7 +102,7 @@ impl Wire {
 		}
 	}
 
-	pub fn as_push_pull_pin(&self) -> PushPullPin {
+	pub fn connect_push_pull_pin(&self) -> PushPullPin {
 		let mut wire = self.wire.lock().unwrap();
 		let id = wire.state.len();
 		wire.state.push(WireState::Floating);
@@ -112,7 +112,7 @@ impl Wire {
 		}
 	}
 
-	pub fn as_open_drain_pin(&self) -> OpenDrainPin {
+	pub fn connect_open_drain_pin(&self) -> OpenDrainPin {
 		let mut wire = self.wire.lock().unwrap();
 		let id = wire.state.len();
 		wire.state.push(WireState::Floating);
@@ -122,7 +122,7 @@ impl Wire {
 		}
 	}
 
-	pub fn as_input_pin(&self) -> InputOnlyPin {
+	pub fn connect_input_pin(&self) -> InputOnlyPin {
 		InputOnlyPin { wire: self.clone() }
 	}
 }
@@ -197,7 +197,7 @@ impl ToggleableOutputPin for PushPullPin {
 		self.wire.update_pin_state(self.id, |x| match x {
 			WireState::High => WireState::Low,
 			WireState::Low => WireState::High,
-			_ => x,
+			WireState::Floating => unreachable!(),
 		});
 		Ok(())
 	}
@@ -251,7 +251,7 @@ impl ToggleableOutputPin for OpenDrainPin {
 		self.wire.update_pin_state(self.id, |x| match x {
 			WireState::Floating => WireState::Low,
 			WireState::Low => WireState::Floating,
-			_ => x,
+			WireState::High => unreachable!(),
 		});
 		Ok(())
 	}
@@ -265,6 +265,8 @@ mod tests {
 	#[test]
 	fn init() {
 		let wire = Wire::new();
+		let wire2 = Wire::default();
+		assert_eq!(wire.get_state(), wire2.get_state());
 		assert_eq!(Floating, wire.get_state());
 		let wire = Wire::new_with_pull(High);
 		assert_eq!(High, wire.get_state());
@@ -273,7 +275,7 @@ mod tests {
 	#[test]
 	fn pull_up() {
 		let wire = Wire::new_with_pull(High);
-		let mut pin = wire.as_open_drain_pin();
+		let mut pin = wire.connect_open_drain_pin();
 		assert_eq!(High, wire.get_state());
 		assert_eq!(Ok(()), pin.set_high());
 		assert_eq!(Low, wire.get_state());
@@ -288,7 +290,7 @@ mod tests {
 	#[test]
 	fn pull_down() {
 		let wire = Wire::new_with_pull(Low);
-		let mut pin = wire.as_push_pull_pin();
+		let mut pin = wire.connect_push_pull_pin();
 		assert_eq!(Low, wire.get_state());
 		assert_eq!(Ok(()), pin.set_high());
 		assert_eq!(Ok(false), pin.is_set_low());
@@ -307,8 +309,8 @@ mod tests {
 	#[test]
 	fn input() {
 		let wire = Wire::new();
-		let mut pin_out = wire.as_push_pull_pin();
-		let pin_in = wire.as_input_pin();
+		let mut pin_out = wire.connect_push_pull_pin();
+		let pin_in = wire.connect_input_pin();
 		assert_eq!(Floating, wire.get_state());
 		assert_eq!(Ok(false), pin_in.is_high());
 		assert_eq!(Ok(false), pin_in.is_low());
@@ -326,10 +328,26 @@ mod tests {
 	#[should_panic]
 	fn short_circuit() {
 		let wire = Wire::new();
-		let mut pin1 = wire.as_push_pull_pin();
-		let mut pin2 = wire.as_push_pull_pin();
+		let mut pin1 = wire.connect_push_pull_pin();
+		let mut pin2 = wire.connect_push_pull_pin();
 		assert_eq!(Ok(()), pin1.set_high());
 		// this will cause a short circuit and panic
 		assert_eq!(Ok(()), pin2.set_low());
+	}
+
+	#[test]
+	fn multiple_pins() {
+		let wire = Wire::new();
+		let mut pin1 = wire.connect_push_pull_pin();
+		let mut pin2 = wire.connect_open_drain_pin();
+		let pin3 = wire.connect_input_pin();
+		assert_eq!(Ok(()), pin1.set_high());
+		assert_eq!(Ok(true), pin3.is_high());
+		assert_eq!(Ok(()), pin2.set_low());
+		assert_eq!(Ok(true), pin3.is_high());
+		assert_eq!(Ok(()), pin1.set_low());
+		assert_eq!(Ok(true), pin3.is_low());
+		assert_eq!(Ok(()), pin2.set_high());
+		assert_eq!(Ok(true), pin3.is_low());
 	}
 }
