@@ -4,7 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/v/embedded-hal-sync-pins.svg)](https://crates.io/crates/embedded-hal-sync-pins)
 [![Docs.rs](https://docs.rs/embedded-hal-sync-pins/badge.svg)](https://docs.rs/embedded-hal-sync-pins)
 [![CI](https://github.com/niclashoyer/embedded-hal-sync-pins/workflows/Continuous%20Integration/badge.svg)](https://github.com/niclashoyer/embedded-hal-sync-pins/actions)
-[![Coverage Status](https://coveralls.io/repos/github/niclashoyer/embedded-hal-sync-pins/badge.svg?branch=master)](https://coveralls.io/github/niclashoyer/embedded-hal-sync-pins?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/niclashoyer/embedded-hal-sync-pins/badge.svg?branch=main)](https://coveralls.io/github/niclashoyer/embedded-hal-sync-pins?branch=main)
 
 Pin implementations for [`embedded-hal`](https://github.com/rust-embedded/embedded-hal)
 that can be manipulated and shared safely between threads.
