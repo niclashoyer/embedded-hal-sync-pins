@@ -1,6 +1,7 @@
 use embedded_hal::digital::blocking::{
 	InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin,
 };
+use embedded_hal::digital::ErrorType;
 use std::convert::Infallible;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -137,9 +138,11 @@ pub struct InputOnlyPin {
 	wire: Wire,
 }
 
-impl InputPin for InputOnlyPin {
+impl ErrorType for InputOnlyPin {
 	type Error = Infallible;
+}
 
+impl InputPin for InputOnlyPin {
 	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_state() == WireState::High)
 	}
@@ -154,9 +157,11 @@ pub struct PushPullPin {
 	id: PinId,
 }
 
-impl InputPin for PushPullPin {
+impl ErrorType for PushPullPin {
 	type Error = Infallible;
+}
 
+impl InputPin for PushPullPin {
 	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_state() == WireState::High)
 	}
@@ -167,8 +172,6 @@ impl InputPin for PushPullPin {
 }
 
 impl OutputPin for PushPullPin {
-	type Error = Infallible;
-
 	fn set_low(&mut self) -> Result<(), Self::Error> {
 		self.wire.set_state(self.id, WireState::Low);
 		Ok(())
@@ -191,8 +194,6 @@ impl StatefulOutputPin for PushPullPin {
 }
 
 impl ToggleableOutputPin for PushPullPin {
-	type Error = Infallible;
-
 	fn toggle(&mut self) -> Result<(), Self::Error> {
 		self.wire.update_pin_state(self.id, |x| match x {
 			WireState::Low => WireState::High,
@@ -208,9 +209,11 @@ pub struct OpenDrainPin {
 	id: PinId,
 }
 
-impl InputPin for OpenDrainPin {
+impl ErrorType for OpenDrainPin {
 	type Error = Infallible;
+}
 
+impl InputPin for OpenDrainPin {
 	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.wire.get_state() == WireState::High)
 	}
@@ -221,8 +224,6 @@ impl InputPin for OpenDrainPin {
 }
 
 impl OutputPin for OpenDrainPin {
-	type Error = Infallible;
-
 	fn set_low(&mut self) -> Result<(), Self::Error> {
 		self.wire.set_state(self.id, WireState::Floating);
 		Ok(())
@@ -245,8 +246,6 @@ impl StatefulOutputPin for OpenDrainPin {
 }
 
 impl ToggleableOutputPin for OpenDrainPin {
-	type Error = Infallible;
-
 	fn toggle(&mut self) -> Result<(), Self::Error> {
 		self.wire.update_pin_state(self.id, |x| match x {
 			WireState::Floating => WireState::Low,
