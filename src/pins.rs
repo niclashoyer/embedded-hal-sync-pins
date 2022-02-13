@@ -11,6 +11,7 @@
 
 use core::convert::Infallible;
 use embedded_hal::digital::blocking as hal;
+use embedded_hal::digital::ErrorType;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -125,9 +126,11 @@ impl InputPin {
 	}
 }
 
-impl hal::InputPin for InputPin {
+impl ErrorType for InputPin {
 	type Error = Infallible;
+}
 
+impl hal::InputPin for InputPin {
 	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::High)
 	}
@@ -170,9 +173,11 @@ impl PushPullPin {
 	}
 }
 
-impl hal::OutputPin for PushPullPin {
+impl ErrorType for PushPullPin {
 	type Error = Infallible;
+}
 
+impl hal::OutputPin for PushPullPin {
 	fn set_high(&mut self) -> Result<(), Self::Error> {
 		self.state.store(PinState::High, Ordering::SeqCst);
 		Ok(())
@@ -195,8 +200,6 @@ impl hal::StatefulOutputPin for PushPullPin {
 }
 
 impl hal::ToggleableOutputPin for PushPullPin {
-	type Error = Infallible;
-
 	fn toggle(&mut self) -> Result<(), Self::Error> {
 		self.state
 			.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |x| match x {
@@ -209,8 +212,6 @@ impl hal::ToggleableOutputPin for PushPullPin {
 }
 
 impl hal::InputPin for PushPullPin {
-	type Error = Infallible;
-
 	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::High)
 	}
@@ -260,9 +261,11 @@ impl OpenDrainPin {
 	}
 }
 
-impl hal::OutputPin for OpenDrainPin {
+impl ErrorType for OpenDrainPin {
 	type Error = Infallible;
+}
 
+impl hal::OutputPin for OpenDrainPin {
 	fn set_high(&mut self) -> Result<(), Self::Error> {
 		self.state.store(PinState::Low, Ordering::SeqCst);
 		Ok(())
@@ -285,8 +288,6 @@ impl hal::StatefulOutputPin for OpenDrainPin {
 }
 
 impl hal::ToggleableOutputPin for OpenDrainPin {
-	type Error = Infallible;
-
 	fn toggle(&mut self) -> Result<(), Self::Error> {
 		self.state
 			.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |x| match x {
@@ -299,8 +300,6 @@ impl hal::ToggleableOutputPin for OpenDrainPin {
 }
 
 impl hal::InputPin for OpenDrainPin {
-	type Error = Infallible;
-
 	fn is_high(&self) -> Result<bool, Self::Error> {
 		Ok(self.state.load(Ordering::SeqCst) == PinState::High)
 	}
