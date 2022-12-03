@@ -1,14 +1,12 @@
-use embedded_hal::digital::blocking::{
-	InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin,
-};
 use embedded_hal::digital::ErrorType;
+use embedded_hal::digital::{InputPin, OutputPin, StatefulOutputPin, ToggleableOutputPin};
 use std::convert::Infallible;
 use std::sync::Arc;
 use std::sync::Mutex;
 
 type PinId = usize;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum WireState {
 	Low,
 	High,
