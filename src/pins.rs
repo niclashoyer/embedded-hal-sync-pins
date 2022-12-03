@@ -2,15 +2,15 @@
 //!
 //! This module provides implementations of atomic pin types that
 //! can be used by any [`embedded_hal`] implementation that use
-//! [`Input`-](`embedded_hal::digital::blocking::InputPin`) or
-//! [`OutputPin`s](`embedded_hal::digital::blocking::OutputPin`).
+//! [`Input`-](`embedded_hal::digital::InputPin`) or
+//! [`OutputPin`s](`embedded_hal::digital::OutputPin`).
 //!
 //! As atomic types these pins use primitive [`atomic`](`std::sync::atomic`) types,
 //! so that these pins can be shared safely between threads. Especially useful
 //! for integration testing.
 
 use core::convert::Infallible;
-use embedded_hal::digital::blocking as hal;
+use embedded_hal::digital as hal;
 use embedded_hal::digital::ErrorType;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::{FromPrimitive, ToPrimitive};
@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 /// A digital pin state.
-#[derive(Clone, Debug, PartialEq, FromPrimitive, ToPrimitive)]
+#[derive(Clone, Debug, PartialEq, Eq, FromPrimitive, ToPrimitive)]
 pub enum PinState {
 	/// Logical high
 	High = 1,
@@ -105,7 +105,7 @@ impl Default for AtomicPinState {
 ///
 /// ```
 /// use embedded_hal_sync_pins::pins::{AtomicPinState, InputPin, PinState};
-/// use embedded_hal::digital::blocking::InputPin as HalInputPin;
+/// use embedded_hal::digital::InputPin as HalInputPin;
 /// use std::sync::{Arc, atomic::Ordering};
 ///
 /// let state = Arc::new(AtomicPinState::new_with_state(PinState::Low));
@@ -152,7 +152,7 @@ impl hal::InputPin for InputPin {
 ///
 /// ```
 /// use embedded_hal_sync_pins::pins::{AtomicPinState, PushPullPin, PinState};
-/// use embedded_hal::digital::blocking::{InputPin as HalInputPin, OutputPin};
+/// use embedded_hal::digital::{InputPin as HalInputPin, OutputPin};
 /// use std::sync::Arc;
 ///
 /// let state = Arc::new(AtomicPinState::new());
@@ -236,7 +236,7 @@ impl hal::InputPin for PushPullPin {
 ///
 /// ```
 /// use embedded_hal_sync_pins::pins::{AtomicPinState, OpenDrainPin, PinState};
-/// use embedded_hal::digital::blocking::{InputPin as HalInputPin, OutputPin};
+/// use embedded_hal::digital::{InputPin as HalInputPin, OutputPin};
 /// use std::sync::{Arc, atomic::Ordering};
 ///
 /// let state = Arc::new(AtomicPinState::new());
